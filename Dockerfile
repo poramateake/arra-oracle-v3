@@ -36,6 +36,8 @@ RUN apt-get update \
 COPY package.json bun.lock ./
 COPY frontend/package.json ./frontend/package.json
 COPY workers/mcp/package.json ./workers/mcp/package.json
+COPY packages ./packages
+COPY src ./src
 RUN bun install --frozen-lockfile
 COPY frontend ./frontend
 RUN cd frontend && bun run build
