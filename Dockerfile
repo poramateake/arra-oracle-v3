@@ -30,6 +30,9 @@ RUN bun build src/server.ts src/index.ts --target bun --outdir dist \
 # the entry-point bundler above.
 FROM oven/bun:1 AS frontend-builder
 WORKDIR /app
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
 COPY package.json bun.lock ./
 COPY frontend/package.json ./frontend/package.json
 COPY workers/mcp/package.json ./workers/mcp/package.json
