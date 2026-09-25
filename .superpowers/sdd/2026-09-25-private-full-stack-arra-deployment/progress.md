@@ -72,3 +72,47 @@
   and `git diff --check` passed. Full suite — 672 pass, 0 fail; integration —
   38 pass, 13 skip, 0 fail; frontend build passed with only the existing chunk
   size warning.
+
+- Mint provider rollout — 2026-09-25: strict SSH preflight and root-admin path
+  completed without changing the original Arra checkout. Hermes env backup was
+  created before enabling/adjusting the loopback API; Hermes `/health`,
+  `/v1/models`, and a real Grok completion passed. The adapter is configured
+  `hermes,codex` with separate mode-600 secrets; no OpenAI chat key is used.
+  The Codex bridge service is active on loopback `47781`; `/health` and
+  `/v1/models` pass. A live bridge completion returns the sanitized 502
+  `codex_bridge_failed` because Mint's existing Codex OAuth refresh is 401
+  expired. No logout/re-auth was attempted; manual Codex login on Mint remains
+  the only missing provider gate.
+- Staging image rollout — 2026-09-25: first Docker build exposed missing
+  frontend builder prerequisites, then missing root `src/`/`packages/` inputs;
+  commits `cbdd9356` and `9bdcb955` fixed both. The final isolated build
+  completed 41/41 steps. Stage ran on 48778/47779 with a separate volume,
+  passed Arra health (DB/FTS/MCP/plugins) and adapter Hermes ask, then was
+  stopped without removing its volume before production cutover.
+- Production cutover — 2026-09-25: latest existing archive
+  `arra-mint-20260924T203047Z.tar.gz` was reused because its `oracle.db` and
+  `vectors.db` hashes exactly matched the live volume; no blind duplicate
+  backup was made. Existing `arra-mint_arra-oracle-data` was preserved. The
+  `arra-mint` service now runs the pinned feature image plus adapter; both
+  containers are healthy. Arra health reports DB connected, FTS 6/6, plugins
+  `arra` and `oracle-dig` healthy, MCP catalog 32, consolidation worker on,
+  entity backfill on with `dryRunOnly=true`; vector is deliberately unavailable
+  because `ORACLE_EMBEDDER=none` (documented FTS fallback).
+- Live acceptance — 2026-09-25: production gate passed auth negatives and
+  positives, adapter health, canonical plugin registry, docs, FTS stats, and
+  a real `/api/v1/ask` with `mode: llm` plus validated citations/no-evidence.
+  MCP initialize, `tools/list` (28 tools), and authenticated `oracle_search`
+  call passed. Listeners verified loopback-only on 47778 (Arra), 47779
+  (adapter), 47781 (Codex bridge), and 8642 (Hermes). The semantic-vector gate
+  remains intentionally pending; FTS-only acceptance is the active safe mode.
+- Adapter corrections — 2026-09-25: Hermes citation objects are normalized
+  to source indexes, and ask instructions containing “superseded” no longer
+  trigger consolidation detection. Targeted adapter suite now passes 12/12;
+  Codex fallback unit suite passes 4/4. Acceptance now skips vector checks
+  when `ARRA_RUN_SEMANTIC_GATE=0`, matching the documented FTS-only mode, and
+  validates required plugins from the health registry.
+- Full-suite rerun — 2026-09-25: private deployment suites, typecheck,
+  shell syntax, and diff checks passed. The full `bun test --isolate` rerun
+  reached an unrelated `maw-plugin` Docker-build failure and then hung in its
+  Docker credential/build subprocess; it was interrupted. No deployment test
+  failure or lingering test/container process was left behind.
