@@ -46,6 +46,18 @@ describe('private LLM adapter', () => {
     expect(await result.json()).toEqual({ answer: 'Arra is private.', citations: [1], noEvidence: false });
   });
 
+  test('does not misclassify ask instructions that mention superseded evidence', async () => {
+    const result = await handleRequest(new Request('http://127.0.0.1/ask', {
+      method: 'POST', body: JSON.stringify({ ...askPayload, instruction: 'Warn when evidence is stale or superseded. Return JSON only with keys answer, citations, noEvidence.' }), headers: { 'content-type': 'application/json' },
+    }), {
+      env: { ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_LLM_PROVIDER: 'hermes', HERMES_API_KEY: 'hermes-key', HERMES_MODEL: 'grok-4.7' },
+      fetcher: async () => response({ choices: [{ message: { content: '{"answer":"Arra is private.","citations":[1],"noEvidence":false}' } }] }),
+    });
+
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ answer: 'Arra is private.', citations: [1], noEvidence: false });
+  });
+
   test('rejects a non-loopback Hermes endpoint in private mode without sending the key', async () => {
     let calls = 0;
     const result = await handleRequest(new Request('http://127.0.0.1/ask', {

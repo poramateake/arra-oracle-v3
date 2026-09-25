@@ -182,7 +182,9 @@ function parseJson(value: string): unknown {
   const text = value.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   return JSON.parse(text);
 }
-function isConsolidation(instruction: string): boolean { const text = instruction.toUpperCase(); return text.includes('SUPERSEDE') || text.includes('NOOP'); }
+function isConsolidation(instruction: string): boolean {
+  return /\bSUPERSEDE\b|\bNOOP\b/i.test(instruction);
+}
 function asRecord(value: unknown): Record<string, unknown> { if (!isRecord(value)) throw new Error('response must be an object'); return value; }
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
 function text(value: unknown): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
