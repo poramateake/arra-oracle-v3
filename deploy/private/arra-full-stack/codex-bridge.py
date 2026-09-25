@@ -115,15 +115,19 @@ def codex_args(output_path: Path, consolidation: bool) -> list[str]:
         "-C", str(workdir),
         "-c", "mcp_servers={}",
         "-c", "plugins={}",
-        "exec", "--json", "--skip-git-repo-check",
-        "--sandbox", "read-only", "--ask-for-approval", "never",
-        "--output-schema", str(schema),
-        "--output-last-message", str(output_path),
-        "-",
+        "--sandbox", "read-only",
+        "--ask-for-approval", "never",
+        "--ephemeral",
     ]
     model = env_value("CODEX_MODEL")
     if model and model.lower() != DEFAULT_MODEL:
-        args[args.index("exec") + 1:args.index("exec") + 1] = ["--model", model]
+        args.extend(["--model", model])
+    args.extend([
+        "exec", "--json", "--skip-git-repo-check",
+        "--output-schema", str(schema),
+        "--output-last-message", str(output_path),
+        "-",
+    ])
     return args
 
 

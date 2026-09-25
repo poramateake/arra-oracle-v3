@@ -30,6 +30,17 @@ class CodexBridgeTest(unittest.TestCase):
         self.assertIn("read-only", args)
         self.assertIn("never", args)
         self.assertIn("--output-schema", args)
+        self.assertLess(args.index("--ask-for-approval"), args.index("exec"))
+        self.assertLess(args.index("--sandbox"), args.index("exec"))
+
+    def test_pinned_model_is_a_global_option(self):
+        old = MODULE.env_value
+        try:
+            MODULE.env_value = lambda name, default="": "gpt-test" if name == "CODEX_MODEL" else old(name, default)
+            args = MODULE.codex_args(Path('/tmp/arra-last-message.json'), False)
+            self.assertLess(args.index("--model"), args.index("exec"))
+        finally:
+            MODULE.env_value = old
 
 
 if __name__ == "__main__":
