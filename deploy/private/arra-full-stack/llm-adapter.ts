@@ -150,12 +150,21 @@ function parsePayload(value: unknown): AskPayload {
 function validateAsk(value: unknown, sources: Source[]): Record<string, unknown> {
   const record = asRecord(value);
   const answer = typeof record.answer === 'string' ? record.answer.trim() : '';
-  const citations = Array.isArray(record.citations) ? record.citations.map(Number).filter(Number.isInteger) : [];
+  const citationValue = record.citations ?? record.citationIndexes ?? record.citation_indexes;
+  const citations = citationIndexes(citationValue);
   if (!answer || typeof record.noEvidence !== 'boolean') throw new Error('invalid ask response');
   const validIndexes = new Set(sources.map((source, index) => Number.isInteger(source.index) ? Number(source.index) : index + 1));
   if (citations.some((citation) => !validIndexes.has(citation))) throw new Error('ask citation index is not in sources');
   if (record.noEvidence === false && citations.length === 0) throw new Error('evidence-backed ask requires citations');
   return { answer, citations: [...new Set(citations)], noEvidence: record.noEvidence };
+}
+
+function citationIndexes(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    if (isRecord(item)) return Number(item.index ?? item.citationIndex ?? item.citation_index);
+    return Number(item);
+  }).filter(Number.isInteger);
 }
 
 function validateConsolidation(value: unknown, sources: Source[]): Record<string, unknown> {
