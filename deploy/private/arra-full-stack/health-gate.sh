@@ -33,9 +33,17 @@ expect_status 200 "$adapter/health"
 expect_status 401 "$base/api/search?q=private-gate"
 expect_status 401 --config "$wrong_config" "$base/api/search?q=private-gate"
 expect_status 200 --config "$auth_config" "$base/api/search?q=private-gate"
-expect_status 200 --config "$auth_config" "$base/api/plugins/arra"
-expect_status 200 --config "$auth_config" "$base/api/plugins/oracle-dig"
 expect_status 200 --config "$auth_config" "$base/api/docs/json"
+
+plugin_health="$(curl --silent --show-error --fail --location --max-time 10 --config "$auth_config" "$base/api/health")"
+PLUGIN_HEALTH="$plugin_health" bun -e '
+  const body = JSON.parse(process.env.PLUGIN_HEALTH ?? "{}");
+  const plugins = body.data?.plugins ?? body.plugins;
+  const items = Array.isArray(plugins?.items) ? plugins.items : [];
+  const names = new Set(items.map((item) => String(item.name ?? "")));
+  for (const required of ["arra", "oracle-dig"]) if (!names.has(required)) throw new Error(`required private plugin missing from health: ${required}`);
+'
+
 expect_status 401 -X POST -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' "$base/mcp"
 expect_not_status 401 --config "$mcp_config" -X POST -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' "$base/mcp"
 
