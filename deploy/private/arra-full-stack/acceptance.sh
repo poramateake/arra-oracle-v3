@@ -13,13 +13,15 @@ trap cleanup EXIT
 chmod 600 "$auth_config"
 printf 'header = "Authorization: Bearer %s"\n' "$token" > "$auth_config"
 
+run_semantic="${ARRA_RUN_SEMANTIC_GATE:-1}"
 curl --silent --show-error --fail --location --max-time 15 --config "$auth_config" "$base/api/v1/health" > "$tmp"
-bun -e 'const body=await Bun.file(process.argv[1]).json(); const vector=body.vector ?? body.subsystems?.vector; if (!vector || vector.status === "down") throw new Error("vector health is not available");' "$tmp"
+if [[ "$run_semantic" == "1" ]]; then
+  bun -e 'const body=await Bun.file(process.argv[1]).json(); const vector=body.vector ?? body.subsystems?.vector; if (!vector || vector.status === "down") throw new Error("vector health is not available");' "$tmp"
+fi
 
 curl --silent --show-error --fail --location --max-time 15 --config "$auth_config" "$base/api/stats" > "$tmp"
 bun -e 'const body=await Bun.file(process.argv[1]).json(); const count=Number(body.documents ?? body.total ?? body.stats?.documents ?? 0); if (!Number.isFinite(count) || count < 1) throw new Error("no indexed documents");' "$tmp"
 
-run_semantic="${ARRA_RUN_SEMANTIC_GATE:-1}"
 if [[ "$run_semantic" == "1" ]]; then
   query="${ARRA_SEMANTIC_QUERY:-}"
   expected_source="${ARRA_EXPECTED_SOURCE:-}"
