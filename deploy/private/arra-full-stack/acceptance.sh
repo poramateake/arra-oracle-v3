@@ -38,7 +38,7 @@ fi
 run_ask="${ARRA_RUN_ASK_GATE:-1}"
 if [[ "$run_ask" == "1" ]]; then
   body='{"question":"Arra private deployment decision","llm":true,"limit":5}'
-  curl --silent --show-error --fail --location --max-time 45 --config "$auth_config" -H 'content-type: application/json' -X POST --data "$body" "$base/api/ask" > "$tmp"
+  curl --silent --show-error --fail --location --max-time 90 --config "$auth_config" -H 'content-type: application/json' -X POST --data "$body" "$base/api/ask" > "$tmp"
   bun -e 'const body=await Bun.file(process.argv[1]).json(); if (typeof body.answer!=="string") throw new Error("ask answer missing"); if (body.noEvidence!==true && (!Array.isArray(body.citations)||body.citations.length<1)) throw new Error("ask answer lacks grounded citations");' "$tmp"
 fi
 

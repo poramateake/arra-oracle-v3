@@ -12,6 +12,10 @@ services:
     ports: !override []
     environment:
       ARRA_ENV: production
+      # Hermes may spend tens of seconds processing its injected context;
+      # keep the Arra request bound above the adapter's provider timeout so a
+      # valid primary response can arrive before fail-closed behavior.
+      ARRA_REQUEST_TIMEOUT_MS: "75000"
       ORACLE_PRIVATE_DEPLOYMENT: "1"
       ORACLE_BIND_HOST: 127.0.0.1
       ORACLE_VECTOR_DB: sqlite-vec
