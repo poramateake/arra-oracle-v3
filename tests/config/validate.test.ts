@@ -109,4 +109,43 @@ describe('config env validation', () => {
     };
     expect(validateEnv({ env, emitOptionalWarnings: false }).env.GOOGLE_API_KEY).toBe('google-gemini-key');
   });
+
+  test('private deployment requires the HTTP bearer auth boundary', () => {
+    expect(() => validateEnv({
+      env: { HOME: '/tmp/arra-home', ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_ENV: 'production' },
+      emitOptionalWarnings: false,
+    })).toThrow(/private deployment requires ARRA_API_TOKEN/);
+  });
+
+  test('private deployment rejects mismatched stacked HTTP credentials', () => {
+    expect(() => validateEnv({
+      env: {
+        HOME: '/tmp/arra-home', ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_ENV: 'production',
+        ARRA_API_TOKEN: 'http-token', ARRA_API_KEY: 'different-token', ORACLE_BIND_HOST: '127.0.0.1',
+      },
+      emitOptionalWarnings: false,
+    })).toThrow(/ARRA_API_KEY and ARRA_API_TOKEN/);
+  });
+
+  test('private deployment accepts loopback adapter with explicit chat model', () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'arra-private-config-'));
+    const env = {
+      HOME: '/tmp/arra-home', ORACLE_DATA_DIR: dataDir, ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_ENV: 'production',
+      ARRA_API_TOKEN: 'existing-mint-token', ORACLE_BIND_HOST: '127.0.0.1', ORACLE_EMBEDDER: 'openai', OPENAI_API_KEY: 'test-key',
+      ORACLE_VECTOR_DB: 'sqlite-vec', ORACLE_EMBEDDING_MODEL: 'text-embedding-3-small',
+      ORACLE_ASK_LLM: '1', OPENAI_CHAT_MODEL: 'test-mini', ORACLE_ASK_LLM_URL: 'http://127.0.0.1:47779/ask',
+      ORACLE_CONSOLIDATION_LLM: '1', ORACLE_CONSOLIDATION_LLM_URL: 'http://localhost:47779/ask',
+    };
+    expect(validateEnv({ env, emitOptionalWarnings: false }).env.ARRA_API_TOKEN).toBe('existing-mint-token');
+  });
+
+  test('allows the private container bind only with the explicit loopback-publish marker', () => {
+    const env = {
+      HOME: '/tmp/arra-home', ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_ENV: 'production',
+      ARRA_API_TOKEN: 'mint-token', ORACLE_BIND_HOST: '0.0.0.0', ARRA_PRIVATE_CONTAINER: '1',
+    };
+    expect(validateEnv({ env, emitOptionalWarnings: false }).env.ARRA_PRIVATE_CONTAINER).toBe('1');
+    expect(() => validateEnv({ env: { ...env, ARRA_PRIVATE_CONTAINER: '0' }, emitOptionalWarnings: false }))
+      .toThrow(/ORACLE_BIND_HOST/);
+  });
 });

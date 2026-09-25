@@ -204,7 +204,10 @@ function assertRouteModule(mod: unknown, index: number): asserts mod is RouteMod
 
 export async function startServer(options: StartServerOptions = {}): Promise<ReturnType<typeof Bun.serve>> {
   const app = await createStartedApp(options);
-  return Bun.serve(app);
+  const bindHost = process.env.ORACLE_BIND_HOST?.trim();
+  return bindHost
+    ? Bun.serve({ hostname: bindHost, port: app.port, fetch: app.fetch })
+    : Bun.serve(app);
 }
 
 export async function createStartedApp(options: StartServerOptions = {}): Promise<ServerSpec> {
@@ -226,15 +229,19 @@ export async function createStartedApp(options: StartServerOptions = {}): Promis
   entityBackfillWorker.start();
   registerGracefulShutdown({ close: async () => { consolidationWorker.stop(); entityBackfillWorker.stop(); } });
 
-  const pluginDirs = defaultUnifiedPluginDirs([join(import.meta.dir, 'plugins')]);
+  const privateDeployment = process.env.ORACLE_PRIVATE_DEPLOYMENT === '1';
+  const privatePluginRoot = process.env.ORACLE_PRIVATE_PLUGIN_ROOT?.trim() || join(import.meta.dir, 'plugins');
+  const pluginDirs = privateDeployment ? [privatePluginRoot] : defaultUnifiedPluginDirs([join(import.meta.dir, 'plugins')]);
+  const pluginPolicy = privateDeployment ? { root: pluginDirs[0], requiredNames: ['arra', 'oracle-dig'], failOnLifecycle: true } : undefined;
   const pluginWarn = (message: string) => console.warn(message);
-  const unifiedPlugins = await loadUnifiedPlugins({ dirs: pluginDirs, warn: pluginWarn });
+  const unifiedPlugins = await loadUnifiedPlugins({ dirs: pluginDirs, warn: pluginWarn, strict: pluginPolicy });
   await unifiedPlugins.init();
   const runtimeRef = createUnifiedRuntimeRef(unifiedPlugins);
   const runtimeLifecycle = { servers: await startUnifiedPluginServers(unifiedPlugins.servers, pluginWarn) };
   const pluginWatcher = watchPluginManifests({
     dirs: pluginDirs,
     warn: pluginWarn,
+    strict: pluginPolicy,
     onReload: (runtime) => swapUnifiedRuntimeWithLifecycle(runtimeRef, runtimeLifecycle, runtime, { warn: pluginWarn }),
   });
   registerGracefulShutdown({ close: async () => shutdown(runtimeRef.current, runtimeLifecycle.servers, pluginWatcher, ownsPidFile) });

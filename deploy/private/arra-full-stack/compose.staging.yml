@@ -1,0 +1,16 @@
+# Staging overlay. Apply after compose.private.yml for a read-only worker gate.
+services:
+  arra-oracle:
+    ports: !override
+      - "127.0.0.1:48778:47778"
+    volumes: !override
+      - arra-oracle-stage-data:/data
+    environment:
+      ORACLE_CONSOLIDATION_WORKER: "0"
+      ORACLE_CONSOLIDATION_LLM: "0"
+      ORACLE_ASK_LLM: "0"
+      ORACLE_ENTITY_BACKFILL: "0"
+      ORACLE_ENTITY_BACKFILL_DRY_RUN: "1"
+
+volumes:
+  arra-oracle-stage-data:

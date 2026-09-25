@@ -1,0 +1,30 @@
+{
+  "version": "2.0",
+  "enabled": true,
+  "host": "127.0.0.1",
+  "port": 47780,
+  "collections": {
+    "openai-small": {
+      "collection": "oracle_knowledge_openai_small",
+      "model": "text-embedding-3-small",
+      "provider": "openai",
+      "adapter": "sqlite-vec",
+      "dataPath": "/data/vectors.db",
+      "primary": true,
+      "embedder": {
+        "backend": "openai",
+        "model": "text-embedding-3-small",
+        "dimensions": 1536
+      }
+    }
+  },
+  "dataPath": "/data/vectors.db",
+  "embeddingEndpoint": "",
+  "storage": {
+    "default": "sqlite-vec",
+    "services": {
+      "sqlite-vec": { "type": "builtin" }
+    }
+  },
+  "proxy": []
+}

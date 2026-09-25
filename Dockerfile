@@ -25,6 +25,18 @@ COPY src ./src
 RUN bun build src/server.ts src/index.ts --target bun --outdir dist \
  && bun build src/cli/index.ts --target bun --outdir dist-cli
 
+# The SPA and first-party unified plug-ins are loaded at runtime from the
+# filesystem. Keep them in the image; dynamic imports cannot be discovered by
+# the entry-point bundler above.
+FROM oven/bun:1 AS frontend-builder
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY frontend/package.json ./frontend/package.json
+COPY workers/mcp/package.json ./workers/mcp/package.json
+RUN bun install --frozen-lockfile
+COPY frontend ./frontend
+RUN cd frontend && bun run build
+
 FROM oven/bun:1 AS test
 WORKDIR /app
 RUN apt-get update \
@@ -56,6 +68,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-cli ./dist-cli
 COPY --from=builder /app/src/db/migrations ./db/migrations
+COPY --from=builder /app/src ./src
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY package.json bun.lock ./
 RUN mkdir -p /data \
  && chown -R bun:bun /data
@@ -73,3 +87,13 @@ EXPOSE 47778
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD bun -e "const r=await fetch('http://127.0.0.1:47778/api/health');process.exit(r.ok?0:1)"
 CMD ["bun", "dist/server.js"]
+
+FROM oven/bun:1-slim AS llm-adapter
+WORKDIR /app
+COPY deploy/private/arra-full-stack/llm-adapter.ts ./llm-adapter.ts
+USER bun
+ENV ORACLE_LLM_ADAPTER_PORT=47779
+EXPOSE 47779
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD bun -e "const r=await fetch('http://127.0.0.1:47779/health');process.exit(r.ok?0:1)"
+CMD ["bun", "llm-adapter.ts"]

@@ -1,0 +1,54 @@
+# Overlay: docker compose -f docker-compose.prod.yml -f deploy/private/arra-full-stack/compose.private.yml up -d
+# Secrets are supplied by ARRA_PRIVATE_ENV_FILE; this file contains no credentials.
+services:
+  arra-oracle:
+    env_file:
+      - path: ${ARRA_PRIVATE_ENV_FILE:-/etc/arra-oracle/private.env}
+        required: true
+    ports: !override
+      - "127.0.0.1:${ARRA_HTTP_PORT:-47778}:47778"
+    environment:
+      ARRA_ENV: production
+      # The host-side published port is loopback-only. Docker's bridged
+      # namespace needs the process to listen on its container interface.
+      ARRA_PRIVATE_CONTAINER: "1"
+      ORACLE_PRIVATE_DEPLOYMENT: "1"
+      ORACLE_BIND_HOST: 0.0.0.0
+      ORACLE_EMBEDDER: openai
+      ORACLE_EMBEDDING_MODEL: text-embedding-3-small
+      ORACLE_EMBEDDING_DIMENSIONS: "1536"
+      ORACLE_VECTOR_DB: sqlite-vec
+      VECTOR_FALLBACK: fts5
+      ORACLE_ASK_LLM: "1"
+      ORACLE_ASK_LLM_URL: http://127.0.0.1:47779/ask
+      ORACLE_CONSOLIDATION_LLM: "1"
+      ORACLE_CONSOLIDATION_LLM_URL: http://127.0.0.1:47779/ask
+      ORACLE_CONSOLIDATION_WORKER: "1"
+      ORACLE_CONSOLIDATION_WORKER_INTERVAL_MS: "900000"
+      ORACLE_CONSOLIDATION_LLM_CAP: "10"
+      ORACLE_ENTITY_BACKFILL: "1"
+      ORACLE_ENTITY_BACKFILL_DRY_RUN: "1"
+      ORACLE_ENTITY_BACKFILL_INTERVAL_MS: "900000"
+      ORACLE_PRIVATE_PLUGIN_ROOT: /app/src/plugins
+      ORACLE_PLUGIN_HOME: /app/src/plugins
+      ORACLE_VECTOR_CONFIG_PATH: /data/vector-server.json
+      ORACLE_DIG_SESSION_ROOT: /data/arra-session
+      ORACLE_ENABLED_PLUGINS: federation
+      ORACLE_FILE_WATCHER: "0"
+
+  llm-adapter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: llm-adapter
+    env_file:
+      - path: ${ARRA_OPENAI_ENV_FILE:-/etc/arra-oracle/openai.env}
+        required: true
+    environment:
+      ORACLE_PRIVATE_DEPLOYMENT: "1"
+      ORACLE_LLM_ADAPTER_PORT: "47779"
+    network_mode: service:arra-oracle
+    depends_on:
+      arra-oracle:
+        condition: service_started
+    restart: unless-stopped
