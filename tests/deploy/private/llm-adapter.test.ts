@@ -12,6 +12,67 @@ function response(body: unknown, status = 200): Response {
 }
 
 describe('private LLM adapter', () => {
+  test('routes Hermes mode to the loopback OpenAI-compatible API without an OpenAI key', async () => {
+    let request: any;
+    let endpoint = '';
+    const result = await handleRequest(new Request('http://127.0.0.1/ask', {
+      method: 'POST', body: JSON.stringify(askPayload), headers: { 'content-type': 'application/json' },
+    }), {
+      env: { ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_LLM_PROVIDER: 'hermes', HERMES_API_KEY: 'hermes-key', HERMES_MODEL: 'grok-4.7' },
+      fetcher: async (url, init) => {
+        endpoint = String(url);
+        request = JSON.parse(String(init?.body));
+        expect((init?.headers as Record<string, string>).authorization).toBe('Bearer hermes-key');
+        return response({ choices: [{ message: { content: '{"answer":"Arra is private.","citations":[1],"noEvidence":false}' } }] });
+      },
+    });
+
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ answer: 'Arra is private.', citations: [1], noEvidence: false });
+    expect(endpoint).toBe('http://127.0.0.1:8642/v1/chat/completions');
+    expect(request.model).toBe('grok-4.7');
+    expect(request.messages[1].content).toContain('What is Arra?');
+  });
+
+  test('rejects a non-loopback Hermes endpoint in private mode without sending the key', async () => {
+    let calls = 0;
+    const result = await handleRequest(new Request('http://127.0.0.1/ask', {
+      method: 'POST', body: JSON.stringify(askPayload), headers: { 'content-type': 'application/json' },
+    }), {
+      env: { ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_LLM_PROVIDER: 'hermes', HERMES_API_KEY: 'hermes-key', HERMES_MODEL: 'grok-4.7', HERMES_CHAT_URL: 'http://100.64.0.1:8642/v1/chat/completions' },
+      fetcher: async () => { calls += 1; return response({}); },
+    });
+
+    expect(result.status).toBe(503);
+    expect(calls).toBe(0);
+  });
+
+  test('falls back from unavailable Hermes to the configured Codex bridge', async () => {
+    const endpoints: string[] = [];
+    const result = await handleRequest(new Request('http://127.0.0.1/ask', {
+      method: 'POST', body: JSON.stringify(askPayload), headers: { 'content-type': 'application/json' },
+    }), {
+      env: {
+        ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_LLM_PROVIDERS: 'hermes,codex',
+        ARRA_LLM_MAX_RETRIES: '0',
+        HERMES_API_KEY: 'hermes-key', HERMES_MODEL: 'grok-4.7',
+        CODEX_BRIDGE_KEY: 'codex-key', CODEX_MODEL: 'codex',
+      },
+      fetcher: async (url) => {
+        endpoints.push(String(url));
+        if (endpoints.length === 1) return response({ error: 'Hermes unavailable' }, 503);
+        return response({ choices: [{ message: { content: '{"answer":"Codex fallback.","citations":[1],"noEvidence":false}' } }] });
+      },
+    });
+
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ answer: 'Codex fallback.', citations: [1], noEvidence: false });
+    expect(endpoints).toEqual([
+      'http://127.0.0.1:8642/v1/chat/completions',
+      'http://127.0.0.1:47781/v1/chat/completions',
+    ]);
+  });
+
   test('fails closed when provider credentials are incomplete', async () => {
     let calls = 0;
     const result = await handleRequest(new Request('http://127.0.0.1/ask', {

@@ -23,9 +23,11 @@ run_semantic="${ARRA_RUN_SEMANTIC_GATE:-1}"
 if [[ "$run_semantic" == "1" ]]; then
   query="${ARRA_SEMANTIC_QUERY:-}"
   expected_source="${ARRA_EXPECTED_SOURCE:-}"
+  semantic_provider="${ARRA_SEMANTIC_PROVIDER:-openai}"
+  semantic_model="${ARRA_SEMANTIC_MODEL:-text-embedding-3-small}"
   [[ -n "$query" && -n "$expected_source" ]] || { echo "semantic gate requires ARRA_SEMANTIC_QUERY and ARRA_EXPECTED_SOURCE" >&2; exit 2; }
   curl --silent --show-error --fail --location --max-time 20 --config "$auth_config" "$base/api/vector/providers?force=1" > "$tmp"
-  bun -e 'const body=await Bun.file(process.argv[1]).json(); const p=(body.providers??[]).find((item)=>item.type==="openai" || item.provider==="openai"); if (!p?.available || !(p.models??[]).includes("text-embedding-3-small")) throw new Error("OpenAI embedding provider is not healthy");' "$tmp"
+  SEMANTIC_PROVIDER="$semantic_provider" SEMANTIC_MODEL="$semantic_model" bun -e 'const body=await Bun.file(process.argv[1]).json(); const provider=process.env.SEMANTIC_PROVIDER??""; const model=process.env.SEMANTIC_MODEL??""; const p=(body.providers??[]).find((item)=>item.type===provider || item.provider===provider); if (!p?.available || (model && !(p.models??[]).includes(model))) throw new Error(`${provider} embedding provider/model is not healthy`);' "$tmp"
   curl --silent --show-error --fail --location --max-time 20 --config "$auth_config" "$base/api/vector/stats" > "$tmp"
   bun -e 'const body=await Bun.file(process.argv[1]).json(); const rows=body.vectors??body.collections??[]; const values=Array.isArray(rows)?rows:Object.values(rows); const count=values.reduce((sum,item)=>sum+Number(item.count??item.documents??0),0); if (count < 1) throw new Error("no vector embeddings indexed");' "$tmp"
   encoded_query="$(QUERY="$query" bun -e 'console.log(encodeURIComponent(process.env.QUERY??""))')"
@@ -40,4 +42,8 @@ if [[ "$run_ask" == "1" ]]; then
   bun -e 'const body=await Bun.file(process.argv[1]).json(); if (typeof body.answer!=="string") throw new Error("ask answer missing"); if (body.noEvidence!==true && (!Array.isArray(body.citations)||body.citations.length<1)) throw new Error("ask answer lacks grounded citations");' "$tmp"
 fi
 
-echo "acceptance gate ok: vector health, indexed corpus, semantic retrieval, cited ask"
+if [[ "$run_semantic" == "1" ]]; then
+  echo "acceptance gate ok: vector health, indexed corpus, semantic retrieval, cited ask"
+else
+  echo "acceptance gate ok: FTS health, indexed corpus, cited ask; semantic gate disabled"
+fi

@@ -1,22 +1,19 @@
 # Overlay: docker compose -f docker-compose.prod.yml -f deploy/private/arra-full-stack/compose.private.yml up -d
-# Secrets are supplied by ARRA_PRIVATE_ENV_FILE; this file contains no credentials.
+# Arra auth is supplied by ARRA_PRIVATE_ENV_FILE; Hermes/Codex adapter secrets
+# are supplied separately by ARRA_LLM_ENV_FILE. This file contains no credentials.
 services:
   arra-oracle:
     env_file:
       - path: ${ARRA_PRIVATE_ENV_FILE:-/etc/arra-oracle/private.env}
         required: true
-    ports: !override
-      - "127.0.0.1:${ARRA_HTTP_PORT:-47778}:47778"
+    # Mint is Linux and Hermes/Codex bridges are host-local. Host networking
+    # keeps every private listener on 127.0.0.1 without exposing a bridge IP.
+    network_mode: host
+    ports: !override []
     environment:
       ARRA_ENV: production
-      # The host-side published port is loopback-only. Docker's bridged
-      # namespace needs the process to listen on its container interface.
-      ARRA_PRIVATE_CONTAINER: "1"
       ORACLE_PRIVATE_DEPLOYMENT: "1"
-      ORACLE_BIND_HOST: 0.0.0.0
-      ORACLE_EMBEDDER: openai
-      ORACLE_EMBEDDING_MODEL: text-embedding-3-small
-      ORACLE_EMBEDDING_DIMENSIONS: "1536"
+      ORACLE_BIND_HOST: 127.0.0.1
       ORACLE_VECTOR_DB: sqlite-vec
       VECTOR_FALLBACK: fts5
       ORACLE_ASK_LLM: "1"
@@ -42,11 +39,12 @@ services:
       dockerfile: Dockerfile
       target: llm-adapter
     env_file:
-      - path: ${ARRA_OPENAI_ENV_FILE:-/etc/arra-oracle/openai.env}
+      - path: ${ARRA_LLM_ENV_FILE:-/etc/arra-oracle/hermes.env}
         required: true
     environment:
       ORACLE_PRIVATE_DEPLOYMENT: "1"
       ORACLE_LLM_ADAPTER_PORT: "47779"
+      ARRA_LLM_PROVIDERS: hermes,codex
     network_mode: service:arra-oracle
     depends_on:
       arra-oracle:

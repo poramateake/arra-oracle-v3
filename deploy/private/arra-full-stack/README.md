@@ -4,35 +4,46 @@ Mint is the sole Arra authority. MacBook Codex is the control plane and only
 repo/config writer. Acer remains a restricted bridge with exactly:
 `oracle_search`, `oracle_read`, `oracle_list`, `oracle_learn`, `oracle_reflect`.
 
-The Mint host publishes Arra only on `127.0.0.1:47778`; the bridged container
-process uses `0.0.0.0` only under the explicit private-container marker so the
-host loopback publication is reachable. The adapter remains loopback-only in
-that shared namespace on `127.0.0.1:47779`. OpenAI is approved remote
-inference for the explicit curated corpus, not public hosting or federation.
+The Mint host runs Arra, Hermes, the optional Codex bridge, and the adapter on
+loopback only: Arra `127.0.0.1:47778`, Hermes `127.0.0.1:8642`, adapter
+`127.0.0.1:47779`, and Codex bridge `127.0.0.1:47781`. The private Compose
+overlay uses Linux host networking so the container can reach those host-local
+services without a bridged/public listener. Hermes/Grok is primary inference;
+the bridge invokes Mint's existing logged-in Codex CLI in read-only mode as a
+bounded fallback. ChatGPT Plus/Codex OAuth is not an OpenAI API key.
 
 ## Operator sequence
 
 1. Pin the current alpha commit and verify the Mint SSH, HTTP bearer token,
    MCP token (if separate),
    Hermes service, tunnel, and no concurrent writer.
-2. On MacBook, enter the OpenAI key once into a Codex-owned mode-600 file. Never
-   paste it into chat, shell output, Git, backup, or MCP. Stream it into Mint's
-   mode-600 `/etc/arra-oracle/private.env` and `/etc/arra-oracle/openai.env`.
-   The second file contains only the OpenAI key/model/rate settings; it must
-   never contain Mint's bearer/MCP token. Set `OPENAI_CHAT_MODEL` only after a
-   provider model-list preflight.
-3. Run `manifest-check.ts` against the three approved roots. Transfer only the
+2. On Mint, enable Hermes's API server in the existing mode-600 `~/.hermes/.env`
+   with `API_SERVER_ENABLED=true`, `API_SERVER_HOST=127.0.0.1`,
+   `API_SERVER_PORT=8642`, and a dedicated random `API_SERVER_KEY`. Keep the
+   xAI OAuth state in Hermes only. Create a separate mode-600
+   `/etc/arra-oracle/hermes.env` containing the Hermes key/model and Codex
+   bridge key/model; use the same Hermes `API_SERVER_KEY` value in
+   `HERMES_API_KEY`, and the same Codex bridge key in the adapter and bridge
+   env files. It never contains Mint's bearer/MCP token. Verify Hermes
+   `/health` and `/v1/models` before rollout. No OpenAI chat key is required.
+3. Install `codex-bridge.service.example` as a Mint user service and copy
+   `codex-bridge.env.example` to its mode-600 environment file. Confirm the
+   service user can run the existing `codex login status`; the bridge uses
+   `codex exec --json --sandbox read-only --ask-for-approval never` and sends
+   only the Arra adapter payload. A trial/account expiry makes this provider
+   unavailable; Hermes remains primary and the adapter fails closed.
+4. Run `manifest-check.ts` against the three approved roots. Transfer only the
    resulting file list over strict SSH; run the official `arra mine` path on
    Mint. Record source hashes, deterministic IDs, FTS rows, and vector rows.
-4. Run staged Compose with `compose.staging.yml` on a separate data
+5. Run staged Compose with `compose.staging.yml` on a separate data
    directory/ports; workers are disabled in this stage;
    run the health, plugin, auth, vector, ask, MCP, and corpus gates.
-5. Create an application-consistent encrypted age backup. Verify decryption and
+6. Create an application-consistent encrypted age backup. Verify decryption and
    boot an isolated restore with `restore-service.sh` before cutover.
-6. Cut over briefly. If any critical gate fails, stop the new writer, restore
+7. Cut over briefly. If any critical gate fails, stop the new writer, restore
    the last good data/config snapshot, and return to FTS-only (`ORACLE_EMBEDDER`
    `none`) within the rollback deadline documented below.
-7. After cross-device acceptance, remove only temporary completion cron
+8. After cross-device acceptance, remove only temporary completion cron
    `fdca8aa7c4d2`; retain the normal backup timer and health-only monitor.
 
 ## Safety boundaries
@@ -47,8 +58,9 @@ inference for the explicit curated corpus, not public hosting or federation.
 - `oracle-dig` session reads must be constrained to the Arra project path. No
   generic `AGENTS.md`/`CLAUDE.md`, raw session tree, screenshots, keys, tokens,
   certificates, `.env*`, backups, or unrelated personal folders are allowed.
-- Existing Mint auth is not replaced. OpenAI credentials are a separate
-  provider secret; Codex/Hermes OAuth cannot satisfy `OPENAI_API_KEY`.
+- Existing Mint auth is not replaced. Hermes and Codex bridge credentials are
+  separate local secrets. Codex OAuth can expire; when Hermes and Codex are
+  unavailable, Arra fails closed to extractive answers/queued NOOP.
 
 The vector template is versioned as `vector-server.private.json`. Install it
 once while the service is stopped with
@@ -77,7 +89,8 @@ is deliberately FTS-only; add `--require-vector --openai-env FILE
 sqlite-vec semantic query. It never reuses a live port or reads corpus files
 from the live checkout.
 
-`acceptance.sh` is a full gate by default: set `ARRA_SEMANTIC_QUERY` and
-`ARRA_EXPECTED_SOURCE`, then run the OpenAI provider/vector retrieval and
-cited-ask checks. Use explicit `ARRA_RUN_SEMANTIC_GATE=0` or
-`ARRA_RUN_ASK_GATE=0` only for a documented FTS-only rollback check.
+`acceptance.sh` runs the cited Hermes/Codex ask gate by default. The semantic
+gate is separate: set `ARRA_SEMANTIC_QUERY` and `ARRA_EXPECTED_SOURCE` only
+when an approved embedding provider has been configured and mined. With the
+default no-provider deployment, set `ARRA_RUN_SEMANTIC_GATE=0`; FTS remains
+the documented fallback and no semantic-vector claim is made.

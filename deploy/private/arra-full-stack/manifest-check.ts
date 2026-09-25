@@ -12,7 +12,7 @@ const SECRET_WORD = /(token|secret|credential|password|private[-_]?key|certifica
 const SECRET_CONTENT = [
   /\bsk-[A-Za-z0-9_-]{20,}\b/,
   /-----BEGIN (?:RSA|OPENSSH|EC|PGP) PRIVATE KEY-----/,
-  /\b(?:OPENAI_API_KEY|ARRA_API_TOKEN|ORACLE_MCP_HTTP_TOKEN)\s*[:=]\s*[^\s#]{16,}/i,
+  /\b(?:OPENAI_API_KEY|HERMES_API_KEY|CODEX_BRIDGE_KEY|ARRA_API_TOKEN|ORACLE_MCP_HTTP_TOKEN)\s*[:=]\s*[^\s#]{16,}/i,
   /\b(?:token|secret|password)\s*[:=]\s*["']?[A-Za-z0-9+/=_-]{24,}/i,
 ];
 const ALLOWED_EXTENSIONS = new Set(['.md', '.mdx']);

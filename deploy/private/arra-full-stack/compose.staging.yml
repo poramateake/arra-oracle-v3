@@ -1,11 +1,19 @@
 # Staging overlay. Apply after compose.private.yml for a read-only worker gate.
 services:
   arra-oracle:
-    ports: !override
-      - "127.0.0.1:48778:47778"
+    ports: !override []
     volumes: !override
       - arra-oracle-stage-data:/data
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:48778/api/health');process.exit(r.ok?0:1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     environment:
+      ORACLE_BIND_HOST: 127.0.0.1
+      ORACLE_PORT: "48778"
+      PORT: "48778"
       ORACLE_CONSOLIDATION_WORKER: "0"
       ORACLE_CONSOLIDATION_LLM: "0"
       ORACLE_ASK_LLM: "0"

@@ -139,6 +139,29 @@ describe('config env validation', () => {
     expect(validateEnv({ env, emitOptionalWarnings: false }).env.ARRA_API_TOKEN).toBe('existing-mint-token');
   });
 
+  test('private deployment accepts Hermes primary with Codex fallback', () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'arra-hermes-config-'));
+    const env = {
+      HOME: '/tmp/arra-home', ORACLE_DATA_DIR: dataDir, ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_ENV: 'production',
+      ARRA_API_TOKEN: 'existing-mint-token', ORACLE_BIND_HOST: '127.0.0.1', ORACLE_EMBEDDER: 'none',
+      ARRA_LLM_PROVIDERS: 'hermes,codex', HERMES_API_KEY: 'hermes-key', HERMES_MODEL: 'grok-4.7',
+      CODEX_BRIDGE_KEY: 'codex-key', CODEX_MODEL: 'codex',
+      ORACLE_ASK_LLM: '1', ORACLE_ASK_LLM_URL: 'http://127.0.0.1:47779/ask', ORACLE_CONSOLIDATION_LLM_URL: 'http://127.0.0.1:47779/ask',
+      ORACLE_CONSOLIDATION_LLM: '1', ORACLE_CONSOLIDATION_LLM_URL: 'http://localhost:47779/ask',
+    };
+    expect(validateEnv({ env, emitOptionalWarnings: false }).env.ARRA_LLM_PROVIDERS).toBe('hermes,codex');
+  });
+
+  test('private Arra runtime may omit provider secrets kept by the adapter', () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'arra-runtime-only-config-'));
+    const env = {
+      HOME: '/tmp/arra-home', ORACLE_DATA_DIR: dataDir, ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_ENV: 'production',
+      ARRA_API_TOKEN: 'existing-mint-token', ORACLE_BIND_HOST: '127.0.0.1', ORACLE_EMBEDDER: 'none',
+      ORACLE_ASK_LLM: '1', ORACLE_ASK_LLM_URL: 'http://127.0.0.1:47779/ask', ORACLE_CONSOLIDATION_LLM_URL: 'http://127.0.0.1:47779/ask',
+    };
+    expect(validateEnv({ env, emitOptionalWarnings: false }).env.ARRA_API_TOKEN).toBe('existing-mint-token');
+  });
+
   test('allows the private container bind only with the explicit loopback-publish marker', () => {
     const env = {
       HOME: '/tmp/arra-home', ORACLE_PRIVATE_DEPLOYMENT: '1', ARRA_ENV: 'production',

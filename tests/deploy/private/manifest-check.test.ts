@@ -42,4 +42,10 @@ describe('curated corpus manifest', () => {
     writeFileSync(join(root, 'notes.md'), 'OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456');
     expect(() => buildManifest(parseManifest('repo|notes.md'), { repo: root })).toThrow(/secret/i);
   });
+
+  test('rejects Hermes and Codex bridge secrets too', () => {
+    const root = mkdtempSync(join(tmpdir(), 'arra-corpus-hermes-secret-')); roots.push(root);
+    writeFileSync(join(root, 'notes.md'), 'HERMES_API_KEY=hermes-secret-value-123456789');
+    expect(() => buildManifest(parseManifest('repo|notes.md'), { repo: root })).toThrow(/secret/i);
+  });
 });
