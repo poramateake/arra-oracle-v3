@@ -116,3 +116,24 @@
   reached an unrelated `maw-plugin` Docker-build failure and then hung in its
   Docker credential/build subprocess; it was interrupted. No deployment test
   failure or lingering test/container process was left behind.
+
+- Fresh continuation — 2026-09-26: hardened the Codex-owned local OpenAI env
+  `/Users/poramateake/.codex/secrets/arra-openai.env` from mode 644 to 600.
+  Repository model preflight returned HTTP 401, so the credential is invalid or
+  expired; no value was printed or transferred. Mint has no Ollama/local
+  embedding service. Hermes exposes no embeddings route, and the existing xAI
+  OAuth token returned 403 from xAI's embedding/model endpoints. Fresh local
+  verification passed `bun run build`, private deploy tests (20/20), safety
+  config/plugin/worker/MCP tests (36/36), and `git diff --check`. Semantic
+  sqlite-vec mining and vector restore remain blocked on a valid approved
+  embedding provider; do not claim full completion until that gate passes.
+
+## Hourly continuation — 2026-09-26T23:27–23:33Z
+
+- Read Notion cross-device checklist `3e26ea5c-9289-8191-ba44-c2f801a6e664` (last edited 22:52Z): five read paths and actual Mac/Acer agent search/read calls were previously evidenced; Acer operator access to Mac and Mint was explicitly authorized and tested at 22:51:27Z. Preserve the distinct restricted bridge key and strict host checking.
+- Mac `pgrep` found the existing SSH tunnel only; strict `ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o UpdateHostKeys=no -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519 arra-mini` exited 0. Mint `pgrep` showed no active deployment/backup/restore writer. No mutation or deployment overlap occurred this run.
+- Mint loopback listeners: Arra `47778`, adapter `47779`, Codex bridge `47781`, Hermes `8642`; `/api/v1/health` reported DB connected, vector down, embedder `none`. MCP `oracle_stats` returned 6 documents, 6 FTS rows, vector degraded; `oracle_search` with `mode=fts` returned expected backup record `mine_bb5cff6d7e24693a235c5be5__chunk_2` from `mine/onboarding-notes/arra-operations.md`. These are not semantic retrieval evidence.
+- Direct authenticated loopback chat completion probes at 23:29:50Z: Hermes `grok-4.7` HTTP 200 with expected marker; Codex bridge HTTP 502 with no completion. Probe script exited 0 after reporting both statuses; the Codex inference gate failed. Existing Mint Codex OAuth refresh needs interactive reauthorization; no credential was copied or changed.
+- Mint `arra-backup.service` last run 2026-09-27 03:30:16 +07 exited 0 and produced `arra-mint-20260926T203016Z.tar.gz` (62,580 bytes). This is the normal local tar backup, not encrypted off-host application-consistent full-service restore evidence. `sudo -n docker ps` returned “a password is required”; production Docker mutation/restore still needs interactive Mint administrator authorization. Sudo policy unchanged.
+- Local `manifest-check.ts` exited 0: 90 curated Markdown files, 522,720 bytes (arra 75, repo 13, mac-setup 2). Generated JSON manifest SHA-256 `e42413c8cafbd93af9d83ddad61c662de774ad4f3bab4cce3714a3e9f6b7af87`; file `/tmp/arra-corpus-20260926T2332Z.json` mode 600. This proves local curation only; Mint corpus import/hashes are still pending.
+- Local `bun test tests/deploy/private` passed 20/20; `bunx tsc --noEmit` and `git diff --check` exited 0. No code/config change this run. Remaining gates: valid approved embedding provider and real vector mine/search/restore; interactive Mint Codex login; administrator-assisted quiesced encrypted off-host backup and isolated full-service restore; production curated corpus and suggestion approve/reject audit evidence; final route/UI/client acceptance.
