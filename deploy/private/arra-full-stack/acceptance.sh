@@ -42,10 +42,13 @@ if [[ "$run_ask" == "1" ]]; then
   body='{"question":"Arra private deployment decision","llm":true,"limit":5}'
   curl --silent --show-error --fail --location --max-time 90 --config "$auth_config" -H 'content-type: application/json' -X POST --data "$body" "$base/api/ask" > "$tmp"
   bun -e 'const body=await Bun.file(process.argv[1]).json(); if (typeof body.answer!=="string") throw new Error("ask answer missing"); if (body.noEvidence!==true && (!Array.isArray(body.citations)||body.citations.length<1)) throw new Error("ask answer lacks grounded citations");' "$tmp"
+  body='{"question":"What is the launch date of the imaginary Sapphire Hedgehog reactor ZX-9137?","llm":false,"limit":5}'
+  curl --silent --show-error --fail --location --max-time 15 --config "$auth_config" -H 'content-type: application/json' -X POST --data "$body" "$base/api/ask" > "$tmp"
+  bun -e 'const body=await Bun.file(process.argv[1]).json(); if (body.noEvidence!==true || !Array.isArray(body.citations) || body.citations.length!==0) throw new Error("unrelated ask returned unsupported evidence");' "$tmp"
 fi
 
 if [[ "$run_semantic" == "1" ]]; then
-  echo "acceptance gate ok: vector health, indexed corpus, semantic retrieval, cited ask"
+  echo "acceptance gate ok: vector health, indexed corpus, semantic retrieval, cited ask, no-evidence fallback"
 else
-  echo "acceptance gate ok: FTS health, indexed corpus, cited ask; semantic gate disabled"
+  echo "acceptance gate ok: FTS health, indexed corpus, cited ask, no-evidence fallback; semantic gate disabled"
 fi
