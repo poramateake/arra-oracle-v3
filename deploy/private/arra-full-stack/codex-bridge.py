@@ -117,13 +117,12 @@ def codex_args(output_path: Path, consolidation: bool) -> list[str]:
         "-c", "plugins={}",
         "--sandbox", "read-only",
         "--ask-for-approval", "never",
-        "--ephemeral",
     ]
     model = env_value("CODEX_MODEL")
     if model and model.lower() != DEFAULT_MODEL:
         args.extend(["--model", model])
     args.extend([
-        "exec", "--json", "--skip-git-repo-check",
+        "exec", "--ephemeral", "--json", "--skip-git-repo-check",
         "--output-schema", str(schema),
         "--output-last-message", str(output_path),
         "-",

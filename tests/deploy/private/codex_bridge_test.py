@@ -32,6 +32,7 @@ class CodexBridgeTest(unittest.TestCase):
         self.assertIn("--output-schema", args)
         self.assertLess(args.index("--ask-for-approval"), args.index("exec"))
         self.assertLess(args.index("--sandbox"), args.index("exec"))
+        self.assertLess(args.index("exec"), args.index("--ephemeral"))
 
     def test_pinned_model_is_a_global_option(self):
         old = MODULE.env_value
