@@ -19,6 +19,19 @@ function normalize(value: string): string {
   return normalized;
 }
 
+function manifestRelativeCandidates(sourceFile: string): string[] {
+  const normalized = normalize(sourceFile);
+  // `arra mine <dir>` deliberately namespaces sources as mine/<dir>/<path>.
+  // The curated snapshot stores source and path separately, so try the full
+  // remainder and then remove the destination/source namespace segments.
+  if (!normalized.startsWith('mine/')) return [normalized];
+  const candidates = [normalized.slice('mine/'.length)];
+  while (candidates[candidates.length - 1].includes('/')) {
+    candidates.push(candidates[candidates.length - 1].slice(candidates[candidates.length - 1].indexOf('/') + 1));
+  }
+  return candidates;
+}
+
 export function verifyCorpusCoverage(dbPath: string, snapshotPath: string): { files: CoverageFile[]; documents: CoverageDocument[]; uncovered: string[] } {
   const snapshot = JSON.parse(readFileSync(snapshotPath, 'utf8')) as { entries?: SnapshotEntry[] };
   const entries = Array.isArray(snapshot.entries) ? snapshot.entries : [];
@@ -38,7 +51,9 @@ export function verifyCorpusCoverage(dbPath: string, snapshotPath: string): { fi
   const seenFiles = new Set<string>();
   for (const row of rows) {
     const sourceFile = normalize(String(row.source_file));
-    const matches = byRelative.get(sourceFile) ?? [];
+    const matches = manifestRelativeCandidates(sourceFile)
+      .map((candidate) => byRelative.get(candidate) ?? [])
+      .find((candidateMatches) => candidateMatches.length > 0) ?? [];
     if (matches.length !== 1) {
       uncovered.push(sourceFile);
       continue;

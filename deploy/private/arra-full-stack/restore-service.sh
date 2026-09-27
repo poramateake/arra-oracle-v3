@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 usage() {
-  echo "usage: $0 --target RESTORE_DIR --repo ARRA_REPO [--port PORT] [--require-vector --openai-env FILE --vector-query QUERY --expected-source SOURCE]"
+  echo "usage: $0 --target RESTORE_DIR --repo ARRA_REPO [--port PORT] [--require-vector --embedding-env FILE --vector-query QUERY --expected-source SOURCE] (--openai-env remains supported)"
 }
 
 target=""; repo=""; port="48778"; require_vector=0; openai_env=""; vector_query=""; expected_source=""
@@ -12,7 +12,7 @@ while (($#)); do
     --repo) repo="${2:?}"; shift 2 ;;
     --port) port="${2:?}"; shift 2 ;;
     --require-vector) require_vector=1; shift ;;
-    --openai-env) openai_env="${2:?}"; shift 2 ;;
+    --openai-env|--embedding-env) openai_env="${2:?}"; shift 2 ;;
     --vector-query) vector_query="${2:?}"; shift 2 ;;
     --expected-source) expected_source="${2:?}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -38,9 +38,8 @@ actual_commit="$(git -C "$repo" rev-parse HEAD)"
 }
 
 if [[ "$require_vector" == "1" ]]; then
-  [[ -s "$openai_env" && -r "$openai_env" ]] || { echo "--require-vector needs a readable mode-600 OpenAI env file" >&2; exit 2; }
-  mode_of() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1"; }
-  [[ "$(mode_of "$openai_env")" == "600" ]] || { echo "OpenAI env file must be mode 600" >&2; exit 2; }
+  source "$(dirname "$0")/restore-embedding-env.sh"
+  load_restore_embedding_env "$openai_env"
   vector_query="${vector_query:-${ARRA_SEMANTIC_QUERY:-}}"
   expected_source="${expected_source:-${ARRA_EXPECTED_SOURCE:-}}"
   [[ -n "$vector_query" && -n "$expected_source" ]] || { echo "--require-vector needs --vector-query and --expected-source" >&2; exit 2; }
@@ -70,7 +69,7 @@ cp -a "$target/data/." "$run_data/"
 
 # Reconstruct every allowlisted source under the isolated restore root. The
 # server is pointed at this snapshot, never at the live checkout's corpus.
-for source in repo arra mac-setup; do
+for source in repo arra mac-setup mint; do
   if [[ -d "$target/corpus/$source" ]]; then
     mkdir -p "$run_root/corpus/$source"
     cp -a "$target/corpus/$source/." "$run_root/corpus/$source/"
@@ -83,7 +82,7 @@ if find "$run_root/corpus" -type l -print -quit | grep -q .; then
 fi
 # Merge the allowlisted source roots into an isolated read root. Conflicting
 # paths must be byte-identical; otherwise the snapshot is ambiguous.
-for source in repo arra mac-setup; do
+for source in repo arra mac-setup mint; do
   if [[ -d "$run_root/corpus/$source" ]]; then
     while IFS= read -r -d '' file; do
       relative_path="${file#"$run_root/corpus/$source/"}"
@@ -97,18 +96,18 @@ for source in repo arra mac-setup; do
     done < <(find "$run_root/corpus/$source" -type f -print0)
   fi
 done
-SOURCE_COVERAGE="$target/deployment/source-coverage.json" RUNTIME_ROOT="$runtime_repo" bun -e '
+SOURCE_COVERAGE="$target/deployment/source-coverage.json" RESTORE_CORPUS="$run_root/corpus" RESTORE_DB="$run_data/oracle.db" RUNTIME_ROOT="$runtime_repo" bun -e '
   const crypto = await import("node:crypto");
   const coverage = await Bun.file(process.env.SOURCE_COVERAGE).json();
   if (coverage.covered !== true || !Array.isArray(coverage.files) || !Array.isArray(coverage.documents) || coverage.uncovered?.length) throw new Error("source coverage is not complete");
   for (const file of coverage.files) {
-    const path = `${process.env.RUNTIME_ROOT}/${file.sourceFile}`;
+    const path = `${process.env.RESTORE_CORPUS}/${file.source}/${file.relativePath}`;
     const bytes = await Bun.file(path).arrayBuffer();
     const hash = crypto.createHash("sha256").update(Buffer.from(bytes)).digest("hex");
     if (hash !== file.sha256 || bytes.byteLength !== file.bytes) throw new Error(`restored source hash mismatch: ${file.sourceFile}`);
   }
   const { Database } = await import("bun:sqlite");
-  const db = new Database(`${process.env.RUNTIME_ROOT}/../data/oracle.db`, { readonly: true });
+  const db = new Database(process.env.RESTORE_DB, { readonly: true });
   for (const file of coverage.documents) {
     const row = db.query("SELECT content FROM oracle_fts WHERE id = ?").get(file.id) as { content?: unknown } | undefined;
     if (typeof row?.content !== "string") throw new Error(`restored FTS content missing: ${file.id}`);
@@ -132,15 +131,6 @@ VECTOR_SOURCE="$target/deployment/vector-server.json" VECTOR_TARGET="$run_data/v
   await Bun.write(process.env.VECTOR_TARGET, JSON.stringify(source, null, 2) + "\n");
 '
 
-openai_key=""; openai_model=""
-if [[ "$require_vector" == "1" ]]; then
-  value_of() { sed -n "s/^$1=//p" "$2" | head -n 1; }
-  openai_key="$(value_of OPENAI_API_KEY "$openai_env")"
-  openai_model="$(value_of OPENAI_EMBEDDING_MODEL "$openai_env")"
-  openai_model="${openai_model:-text-embedding-3-small}"
-  [[ -n "$openai_key" && "$openai_key" != *[[:space:]]* ]] || { echo "OPENAI_API_KEY missing from OpenAI env" >&2; exit 2; }
-fi
-
 server_env=(
   "HOME=$run_home" "PATH=${PATH:-/usr/bin:/bin}" "ORACLE_DATA_DIR=$run_data"
   "ORACLE_DB_PATH=$run_data/oracle.db" "ORACLE_VECTOR_DB_PATH=$run_data/vectors.db"
@@ -153,7 +143,7 @@ server_env=(
   "ORACLE_ASK_LLM=0" "ORACLE_CONSOLIDATION_LLM=0"
 )
 if [[ "$require_vector" == "1" ]]; then
-  server_env+=("ORACLE_EMBEDDER=openai" "ORACLE_EMBEDDING_MODEL=$openai_model" "OPENAI_API_KEY=$openai_key" "VECTOR_FALLBACK=fail")
+  server_env+=("${restore_embedding_env[@]}")
 else
   server_env+=("ORACLE_EMBEDDER=none" "VECTOR_FALLBACK=fts5")
 fi
@@ -195,7 +185,7 @@ vector_stats="$(curl --silent --show-error --fail --location --max-time 10 "http
 if [[ "$require_vector" == "1" ]]; then
   VECTOR_STATS="$vector_stats" bun -e 'const body=JSON.parse(process.env.VECTOR_STATS); const rows=body.vectors??body.collections??[]; const values=Array.isArray(rows)?rows:Object.values(rows); const count=values.reduce((sum,item)=>sum+Number(item.count??item.documents??0),0); if (count < 1) throw new Error("restored vector stats has no embeddings");'
   encoded_query="$(QUERY="$vector_query" bun -e 'console.log(encodeURIComponent(process.env.QUERY ?? ""))')"
-  vector_search="$(curl --silent --show-error --fail --location --max-time 30 "http://127.0.0.1:${port}/api/vector/search?q=${encoded_query}&limit=10" --config "$auth")"
+  vector_search="$(curl --silent --show-error --fail --location --max-time 120 "http://127.0.0.1:${port}/api/vector/search?q=${encoded_query}&limit=10" --config "$auth")"
   EXPECTED_SOURCE="$expected_source" VECTOR_SEARCH="$vector_search" bun -e 'const body=JSON.parse(process.env.VECTOR_SEARCH); const source=process.env.EXPECTED_SOURCE??""; const hits=body.results??[]; if (!hits.some((hit)=>String(hit.source_file??hit.source??"").includes(source))) throw new Error("restored semantic query missed expected vector source");'
 fi
 

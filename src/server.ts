@@ -70,6 +70,8 @@ import { createMetricsLifecycle, metricsRoutes } from './routes/metrics/index.ts
 import { exportRoutes } from './routes/export/index.ts';
 import { memoryRoutes } from './routes/memory/index.ts';
 import { canvasRoutes } from './routes/canvas/index.ts';
+import { createFederationRoutes } from './routes/federation/index.ts';
+import { disabledPluginsFromEnv, enabledPluginsFromEnv, enabledServerPlugins, loadServerPlugins, serverPluginRoutes } from './server/plugin/loader.ts';
 import { tenantsRoutes } from './routes/tenants/index.ts';
 import { watcherRoutes } from './routes/watcher/index.ts';
 import { indexerRoutes } from './routes/indexer/index.ts';
@@ -186,7 +188,10 @@ export function createApp({ unifiedPlugins, runtimeRef = createUnifiedRuntimeRef
 export function createServerRouteModules(unifiedPlugins: UnifiedRuntime, runtimeRef: UnifiedRuntimeRef<UnifiedRuntime>): RouteModule[] {
   const healthRoutes = createHealthRoutes({ pluginCount: unifiedPlugins.pluginCount, pluginMcpToolCount: unifiedPlugins.mcpTools.length, pluginStatuses: unifiedPlugins.pluginStatuses, isDraining });
   const apiModules = [authRoutes, settingsRoutes, feedRoutes, healthRoutes, dashboardRoutes, searchRoutes, askRoutes, vectorRoutes, vectorConfigApiRoutes, conceptsRoutes, knowledgeRoutes, researchRoutes, verifyRoutes, supersedeRoutes, forumApi, tracesApi, scheduleApi, filesRouter, createPluginsRouter({ registry: () => runtimeRef.current.pluginRegistry(), runtimeRef }), sessionsRoutes, oldStudioCompatRoutes, vaultRoutes, metricsRoutes, exportRoutes, memoryRoutes, canvasRoutes, tenantsRoutes, watcherRoutes, indexerRoutes, createFleetLogRoutes()];
-  return [...apiModules, createMcpRoutes({ runtimeRef }), createMcpStreamableRoutes(), createMenuRoutes(menuItemsFromUnifiedPlugins(unifiedPlugins.menu))];
+  const optionalRoutes = serverPluginRoutes(enabledServerPlugins(loadServerPlugins([
+    { name: 'federation', tier: 'extra', enabled: false, routes: () => createFederationRoutes() },
+  ], { enabledPlugins: enabledPluginsFromEnv(), disabledPlugins: disabledPluginsFromEnv() })));
+  return [...apiModules, ...optionalRoutes, createMcpRoutes({ runtimeRef }), createMcpStreamableRoutes(), createMenuRoutes(menuItemsFromUnifiedPlugins(unifiedPlugins.menu))];
 }
 
 export function mountRouteModules(app: ElysiaApp, modules: RouteModule[]): void {

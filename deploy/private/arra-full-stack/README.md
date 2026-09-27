@@ -12,6 +12,12 @@ services without a bridged/public listener. Hermes/Grok is primary inference;
 the bridge invokes Mint's existing logged-in Codex CLI in read-only mode as a
 bounded fallback. ChatGPT Plus/Codex OAuth is not an OpenAI API key.
 
+CPU embeddings run through official Ollama on `127.0.0.1:11434`, using
+`bge-m3` (1024 dimensions) and SQLite-vec. Start `compose.embeddings.yml`,
+pull the model once, and record its digest before indexing. The image is
+pinned; stage, production, and restore must use the same model digest.
+No OpenAI key is needed for this deployment. FTS5 remains the fallback.
+
 ## Operator sequence
 
 1. Pin the current alpha commit and verify the Mint SSH, HTTP bearer token,
@@ -32,19 +38,22 @@ bounded fallback. ChatGPT Plus/Codex OAuth is not an OpenAI API key.
    `codex exec --json --sandbox read-only --ask-for-approval never` and sends
    only the Arra adapter payload. A trial/account expiry makes this provider
    unavailable; Hermes remains primary and the adapter fails closed.
-4. Run `manifest-check.ts` against the three approved roots. Transfer only the
+4. Run `manifest-check.ts` against the approved repo, Arra, mac-setup, and
+   explicitly selected Mint-record roots. Transfer only the
    resulting file list over strict SSH; run the official `arra mine` path on
    Mint. Record source hashes, deterministic IDs, FTS rows, and vector rows.
 5. Run staged Compose with `compose.staging.yml` on a separate data
-   directory/ports; workers are disabled in this stage;
+   volume and ports `48778`/`48779`; workers and LLM asks initially disabled;
+   explicitly enable asks and synthetic worker tests after vector checks;
    run the health, plugin, auth, vector, ask, MCP, and corpus gates.
 6. Create an application-consistent encrypted age backup. Verify decryption and
    boot an isolated restore with `restore-service.sh` before cutover.
 7. Cut over briefly. If any critical gate fails, stop the new writer, restore
    the last good data/config snapshot, and return to FTS-only (`ORACLE_EMBEDDER`
    `none`) within the rollback deadline documented below.
-8. After cross-device acceptance, remove only temporary completion cron
-   `fdca8aa7c4d2`; retain the normal backup timer and health-only monitor.
+8. After all acceptance gates, remove the active completion automation
+   `finish-private-arra-deployment` and any verified superseded completion
+   watcher; retain the normal backup timer and health-only monitor.
 
 ## Safety boundaries
 
@@ -52,7 +61,8 @@ bounded fallback. ChatGPT Plus/Codex OAuth is not an OpenAI API key.
   protection), mismatched stacked `ARRA_API_KEY`, and non-loopback adapter URLs.
   A separate MCP token is allowed, but never substitutes for HTTP protection.
 - `ORACLE_ENTITY_BACKFILL_DRY_RUN=1` is deliberate: workers plan/queue only;
-  human Studio/MCP approval is required for writes.
+  human Studio/HTTP approval is required for consolidation writes. Upstream
+  has no dedicated consolidation approve/reject MCP tools.
 - The strict plugin policy loads exactly the bundled `arra` and `oracle-dig`
   manifests, rejects symlinks/shadowing, and fails on lifecycle errors.
 - `oracle-dig` session reads must be constrained to the Arra project path. No
@@ -84,13 +94,15 @@ boots only a new isolated data
 directory, reconstructs the allowlisted corpus, uses a clean mode-600 runtime
 environment with separate random HTTP/MCP tokens, proves authenticated read,
 FTS search, MCP initialize, loopback binding, and restart. Its default proof
-is deliberately FTS-only; add `--require-vector --openai-env FILE
---vector-query QUERY --expected-source SOURCE` to require an OpenAI-backed
-sqlite-vec semantic query. It never reuses a live port or reads corpus files
+is deliberately FTS-only; add `--require-vector --embedding-env FILE
+--vector-query QUERY --expected-source SOURCE` to require a semantic query.
+The mode-600 file contains `ORACLE_EMBEDDER=ollama`,
+`ORACLE_EMBEDDING_MODEL=bge-m3`, and `OLLAMA_BASE_URL=http://127.0.0.1:11434`.
+Legacy `--openai-env` remains supported. It never reuses a live port or reads corpus files
 from the live checkout.
 
 `acceptance.sh` runs the cited Hermes/Codex ask gate by default. The semantic
 gate is separate: set `ARRA_SEMANTIC_QUERY` and `ARRA_EXPECTED_SOURCE` only
 when an approved embedding provider has been configured and mined. With the
-default no-provider deployment, set `ARRA_RUN_SEMANTIC_GATE=0`; FTS remains
-the documented fallback and no semantic-vector claim is made.
+explicit FTS-only rollback, set `ARRA_RUN_SEMANTIC_GATE=0`; this cannot count
+as successful full-feature acceptance.

@@ -18,6 +18,12 @@ services:
       ARRA_REQUEST_TIMEOUT_MS: "75000"
       ORACLE_PRIVATE_DEPLOYMENT: "1"
       ORACLE_BIND_HOST: 127.0.0.1
+      ORACLE_EMBEDDER: ollama
+      ORACLE_EMBEDDING_MODEL: bge-m3
+      OLLAMA_BASE_URL: http://127.0.0.1:11434
+      ORACLE_EMBED_BATCH_SIZE: "4"
+      ORACLE_EMBED_TIMEOUT_MS: "120000"
+      ORACLE_EMBEDDER_PROBE_TIMEOUT_MS: "30000"
       ORACLE_VECTOR_DB: sqlite-vec
       VECTOR_FALLBACK: fts5
       ORACLE_ASK_LLM: "1"
@@ -38,6 +44,7 @@ services:
       ORACLE_FILE_WATCHER: "0"
 
   llm-adapter:
+    image: ${ARRA_LLM_IMAGE:-arra-private-llm-adapter:latest}
     build:
       context: .
       dockerfile: Dockerfile

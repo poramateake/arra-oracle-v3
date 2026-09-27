@@ -19,6 +19,17 @@ services:
       ORACLE_ASK_LLM: "0"
       ORACLE_ENTITY_BACKFILL: "0"
       ORACLE_ENTITY_BACKFILL_DRY_RUN: "1"
+      ORACLE_ASK_LLM_URL: http://127.0.0.1:48779/ask
+      ORACLE_CONSOLIDATION_LLM_URL: http://127.0.0.1:48779/ask
+
+  llm-adapter:
+    environment:
+      ORACLE_LLM_ADAPTER_PORT: "48779"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:48779/health');process.exit(r.ok?0:1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   arra-oracle-stage-data:

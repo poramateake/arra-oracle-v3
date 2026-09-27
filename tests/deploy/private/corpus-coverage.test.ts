@@ -52,4 +52,21 @@ describe('private corpus source coverage', () => {
       expect(verifyCorpusCoverage(dbPath, snapshotPath).uncovered).toEqual(['README.md', 'missing.md']);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
+
+  test('maps official mine namespace back to its curated root-relative path', () => {
+    const root = mkdtempSync(join(tmpdir(), 'arra-corpus-coverage-'));
+    try {
+      const dbPath = join(root, 'oracle.db'), snapshotPath = join(root, 'snapshot.json');
+      const db = new Database(dbPath);
+      db.exec('CREATE TABLE oracle_documents (id TEXT, source_file TEXT); CREATE TABLE oracle_fts (id TEXT, content TEXT)');
+      db.query('INSERT INTO oracle_documents (id, source_file) VALUES (?, ?)').run('mine-one', 'mine/corpus/docs/one.md');
+      db.query('INSERT INTO oracle_fts (id, content) VALUES (?, ?)').run('mine-one', 'one content');
+      db.close();
+      writeFileSync(snapshotPath, JSON.stringify({ entries: [
+        { source: 'repo', relativePath: 'docs/one.md', sha256: 'a', bytes: 1 },
+      ] }));
+
+      expect(verifyCorpusCoverage(dbPath, snapshotPath).uncovered).toEqual([]);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
 });

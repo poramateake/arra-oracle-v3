@@ -19,3 +19,8 @@ arra|decision-log
 arra|evidence/2026-09-25-official-mcp-completion/RESULTS.md
 mac-setup|device/ai-assistants/arra-mini-remote.md
 mac-setup|device/ai-assistants/hermes-agent.md
+# Pre-existing Mint operational records already referenced by the live DB.
+mint|onboarding-notes/arra-operations.md
+mint|ψ/memory/learnings/2026-09-12_arra-deployment-smoke-check-arramintsmoke202609.md
+mint|ψ/memory/learnings/2026-09-13_arra-acer-client-acceptance-verification-2026-09-1.md
+mint|ψ/memory/learnings/2026-09-25_2026-09-25-hermes-integration-correction-the-mint.md
