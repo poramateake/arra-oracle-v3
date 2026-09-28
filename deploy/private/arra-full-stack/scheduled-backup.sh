@@ -3,7 +3,6 @@
 set -Eeuo pipefail
 umask 077
 export PATH=/home/poramateake/.bun/bin:/usr/bin:/bin
-export ARRA_PINNED_COMMIT=e7068182a8033bea849a57ebf462ca4219a9dbed
 bundle="$(cd "$(dirname "$0")" && pwd)"
 base=/home/poramateake/Documents/arra-oracle
 corpus="$base/staging/full-deploy-20260927d/corpus-20260927d"
@@ -13,6 +12,8 @@ flock -n 9 || { echo 'Arra backup already running' >&2; exit 1; }
 data="$(docker --context default volume inspect -f '{{.Mountpoint}}' arra-mint_arra-oracle-data)"
 [[ "$data" == /var/lib/docker/volumes/arra-mint_arra-oracle-data/_data ]]
 [[ "$(docker --context default inspect -f '{{.State.Running}}' "$container")" == true ]]
+export ARRA_PINNED_COMMIT="$(docker --context default inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$container")"
+[[ "$ARRA_PINNED_COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo 'Runtime image lacks a pinned source revision' >&2; exit 1; }
 archive="arra-private-$(date -u +%Y%m%dT%H%M%SZ).age"
 trap 'docker --context default start "$container" >/dev/null' EXIT
 docker --context default stop --time 30 "$container" >/dev/null
