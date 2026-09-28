@@ -69,6 +69,8 @@ if [[ -e "$vector_config" ]]; then
 fi
 [[ -f "$stage/deployment/vector-server.json" ]] || { echo "vector config is required for private full-stack backup: $vector_config" >&2; exit 2; }
 cp -- "$corpus_manifest" "$stage/deployment/corpus.manifest.json"
+cp -- "$(dirname "$0")/compose.private.yml" "$(dirname "$0")/compose.embeddings.yml" \
+  "$(dirname "$0")/runtime.env.example" "$stage/deployment/"
 mkdir -p "$stage/corpus"
 source_args=()
 for root in "${source_roots[@]}"; do source_args+=(--root "$root"); done
