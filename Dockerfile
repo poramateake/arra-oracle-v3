@@ -73,6 +73,7 @@ ENV HOME=/data \
     BUN_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/simple.html ./dist/simple.html
 COPY --from=builder /app/dist-cli ./dist-cli
 COPY --from=builder /app/src/db/migrations ./db/migrations
 COPY --from=builder /app/src ./src
