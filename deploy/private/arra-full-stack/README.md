@@ -43,8 +43,8 @@ No OpenAI key is needed for this deployment. FTS5 remains the fallback.
    resulting file list over strict SSH; run the official `arra mine` path on
    Mint. Record source hashes, deterministic IDs, FTS rows, and vector rows.
 5. Run staged Compose with `compose.staging.yml` on a separate data
-   volume and ports `48778`/`48779`; workers and LLM asks initially disabled;
-   explicitly enable asks and synthetic worker tests after vector checks;
+   volume and ports `48778`/`48779`; workers disabled and bounded LLM asks enabled;
+   run synthetic worker tests only against the isolated data;
    run the health, plugin, auth, vector, ask, MCP, and corpus gates.
 6. Create an application-consistent encrypted age backup. Verify decryption and
    boot an isolated restore with `restore-service.sh` before cutover.
@@ -79,6 +79,19 @@ overwrite an existing config. Use `ORACLE_VECTOR_CONFIG_PATH` only for a
 protected config stored outside the data volume.
 
 ## Backup/restore contract
+
+Mint's existing daily `arra-backup.timer` invokes `scheduled-backup.sh` through
+`arra-backup.service`. It takes an exclusive lock, verifies the running image's
+40-character revision label, stops the authority, encrypts the curated snapshot,
+and restarts the authority through an exit trap. Install the wrapper only after
+deploying an image labelled `org.opencontainers.image.revision`.
+
+Mac's `com.poramateake.arra-backup-pull` LaunchAgent runs at login and hourly,
+copying encrypted archives and checksum receipts over strict SSH into
+`~/.codex/arra-backups`. It verifies every receipt and never deletes archives.
+The Mac must be awake and logged in; the next run catches up after downtime.
+Recovery identity remains separate in Codex-owned secret storage. No automatic
+retention policy is configured. Watch disk usage and explicitly review retention.
 
 Backups are refused while the authority is live. Stop Arra/vector writers and
 run `backup-age.sh --authority-stopped` with the full 40-hex

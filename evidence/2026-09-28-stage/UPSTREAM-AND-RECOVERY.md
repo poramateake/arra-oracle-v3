@@ -33,3 +33,35 @@ Live recovery results: healthy, FTS 848/848, vectors 848/848, zero pending, hybr
 Post-restart recovery check passed: hybrid search 200, vectorAvailable true, three vector-contributing hits, no warning. Disposable recovery and staging containers stopped afterward; their data retained.
 
 Pending: normal encrypted backup scheduling/off-host maintenance, final device-local gates, Git push/review and completion-automation removal only after all gates pass.
+
+## Follow-up execution, September 28 evening UTC
+
+Normal encrypted scheduling is now installed and executed: Mint `arra-backup.service`
+returned `Result=success`, producing `arra-private-20260928T132953Z.age` and its
+checksum receipt. The daily timer remains active. Mac's hourly/login LaunchAgent
+completed with exit 0 and verified that receipt in `~/.codex/arra-backups`.
+The initial Documents destination hit macOS privacy denial; no privacy setting was
+changed. The identity remains outside the archive destination. The next wrapper
+revision derives source identity from the running image label rather than a constant;
+install that revision only after the labelled candidate reaches production.
+
+Native Mac MCP exposed two gaps: session-owned vector stores were not opened on
+initialization, and long asks outlived Bun's default ten-second idle timeout.
+Commit `67365f43` adds the missing connection and a bounded private-listener timeout.
+Focused regressions passed; combined MCP/private tests passed 176/176 and typecheck
+passed before building. September 28 evening rerun: three focused tests, 11 assertions,
+all passed. Mint Hermes session `20260929_011912_274ede` reported the same pre-fix
+default-search FTS fallback and successful read; this is not a post-fix success claim.
+
+Acer fresh execution at `2026-09-28T18:25:33.604Z`: exact five-tool catalogue,
+FTS backup search, and read of `mine_bb5cff6d7e24693a235c5be5__chunk_2` passed.
+Runnable `acer-read-probe.cjs` records the check. Its predecessor failed a hard-coded
+September 12 document assertion despite successful initialization/catalogue.
+
+Full official multi-stage build of `620dd0ec` completed, including frontend, but
+isolated staging rejected unreadable plugin source directories. Root cause: source
+archive extraction used umask 077, creating 0700 directories copied into the image.
+Stopped the failed stage; production stayed on `private-e7068182`. Re-extracted the
+same pinned Git archive using umask 022 (plugin directories now 0755), retaining
+protected parent directories and all runtime secret permissions, then rebuilt.
+No plugin security check or non-root runtime was bypassed.
