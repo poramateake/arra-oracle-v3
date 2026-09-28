@@ -211,7 +211,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Ret
   const app = await createStartedApp(options);
   const bindHost = process.env.ORACLE_BIND_HOST?.trim();
   return bindHost
-    ? Bun.serve({ hostname: bindHost, port: app.port, fetch: app.fetch })
+    ? Bun.serve({ hostname: bindHost, port: app.port, fetch: app.fetch, idleTimeout: 120 })
     : Bun.serve(app);
 }
 
