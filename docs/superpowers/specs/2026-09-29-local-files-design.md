@@ -1,6 +1,10 @@
 # Cross-device local-only file search
 
-Status: proposed design; requires user review before implementation.
+Status: superseded by the approved cross-device ingestion plan in
+`../plans/2026-09-29-cross-device-files.md`. Historical proposal below; its
+browser-only, cloud-excerpt prohibition and limited-format assumptions no longer
+apply. The approved plan permits bounded automatic agent retrieval, independent
+collectors and sandboxed extended-format extraction. Codex fallback stays deferred.
 
 ## Intent and approved boundaries
 

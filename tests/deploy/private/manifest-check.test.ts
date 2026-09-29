@@ -39,7 +39,7 @@ describe('curated corpus manifest', () => {
 
   test('rejects secret-looking content even in an allowed Markdown file', () => {
     const root = mkdtempSync(join(tmpdir(), 'arra-corpus-secret-')); roots.push(root);
-    writeFileSync(join(root, 'notes.md'), 'OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456');
+    writeFileSync(join(root, 'notes.md'), 'OPENAI_API_KEY=' + 's'.repeat(32));
     expect(() => buildManifest(parseManifest('repo|notes.md'), { repo: root })).toThrow(/secret/i);
   });
 
