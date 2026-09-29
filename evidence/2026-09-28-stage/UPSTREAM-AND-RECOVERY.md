@@ -65,3 +65,49 @@ Stopped the failed stage; production stayed on `private-e7068182`. Re-extracted 
 same pinned Git archive using umask 022 (plugin directories now 0755), retaining
 protected parent directories and all runtime secret permissions, then rebuilt.
 No plugin security check or non-root runtime was bypassed.
+
+## Production verification, 2026-09-29 UTC
+
+Rebuilt source image `private-620dd0ec`, image ID
+`sha256:44b760ff585aaf553c4b64a02f61c22b5d227abd96b54ac440ec685662047dc2`,
+revision label `620dd0ec8d9c77d5d73ea96ceed5d1f3b33be8c0`.
+Staged SDK MCP default hybrid search returned 100 vector matches and successful read.
+Initial LLM request returned extractive fallback after 65.754 seconds; diagnostics
+isolated Hermes timeout at 60 seconds and Codex HTTP 502. Fresh September 29
+staging retry returned `mode=llm`, three citations, noEvidence=false in 28.999 seconds.
+
+Production Compose cutover at 00:48 UTC reused the matching automatic encrypted
+backup `arra-private-20260928T203435Z.age`, whose Mac checksum passed. Production
+SDK MCP search/read passed; cited LLM answer passed in 25.369 seconds. Actual Mac
+native MCP default hybrid search returned 100 vector matches without warning;
+native `oracle_ask` returned LLM mode and three citations. Health: FTS 848/848,
+vectors 848/848, zero pending, Ollama connected.
+
+Mint Hermes session `20260929_074917_cf2f93` performed search/read with 100 vector
+matches and vectorAvailable=true. Exported raw session independently confirmed
+`mcp_arra_oracle_search` and `mcp_arra_oracle_read` calls. No device writer delegated.
+
+Installed revision-aware backup wrapper after backing up its predecessor as
+`scheduled-backup.sh.pre-image-label-20260929`. Service execution succeeded;
+new archive `arra-private-20260929T004944Z.age` SHA-256
+`fca5b30c233d0428208ffadf6dc6347bea5fa026ee5c86d65a204054a745ffce`.
+Mac pull verified receipts; decryption and every checksum passed. Manifest names
+620dd0ec, authorityQuiesced=true, secretIncluded=false. HTTP/adapter env files
+remain mode 0600. No blind duplicate of an unchanged image was taken.
+
+The decrypted Mac copy was transferred to a new isolated Mint directory and
+booted with the exact production image on loopback 49778, workers/LLM disabled.
+Initial manual restore omitted the private plugin-root override and failed closed;
+recreated only that disposable container with the original explicit plugin root,
+retaining its data. Restored health: 848 records/vectors, no pending. Simple HTML
+passed; post-restart SDK MCP hybrid search returned 100 vector matches and no warning.
+Authenticated root with `Accept: text/html` returned Studio HTML 200. The earlier
+`/studio` JSON-default request was not a valid SPA check. Restore and staging
+containers stopped after verification; their data retained.
+
+**Remaining access blocker:** at 00:47 UTC, actual Mint Codex inference failed with
+401 `invalid_refresh_token` despite `codex login status` reporting ChatGPT login.
+Both local service units are active. Hermes CLI inference separately passed.
+Codex fallback requires the user's interactive Mint sign-in; no logout, credential
+copying, auth reset, or host-trust weakening performed. Keep completion automation
+active and do not count fallback as accepted.
