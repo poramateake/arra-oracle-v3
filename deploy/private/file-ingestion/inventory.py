@@ -60,7 +60,8 @@ def scan(root, device, volume, exclusions=(), max_depth=128):
             stack.pop()
             complete = False
             count += 1
-            yield {'status': 'unreadable_directory', 'device': device, 'volume': volume}
+            yield {'status': 'unreadable_directory', 'device': device, 'volume': volume,
+                   'path': str(path.relative_to(root))}
             continue
         record = {'device': device, 'volume': volume,
                   'path': str(path.relative_to(root))}

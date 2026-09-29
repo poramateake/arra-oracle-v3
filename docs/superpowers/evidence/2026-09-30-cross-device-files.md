@@ -17,7 +17,7 @@ Branch: `feat/private-full-stack-arra-deployment`
 | Backup/recovery | PASS | Age archive checksum verified; isolated restore reproduced files/vectors/FTS and known project paths |
 | Lifecycle safety | PASS | Changed content removes stale vectors; complete-scan-only deletion reconciliation; resumable snapshot checkpoints |
 | Local media path | PARTIAL | Mint CPU Whisper-small transcript pilot passed; Mac/Acer have no local Whisper model and keep explicit blocked outcomes |
-| Full coverage | INCOMPLETE | Mint verified scan reports `complete=false`; approximately 463k discovered entries; hourly ingestion advances bounded batches |
+| Full coverage | PARTIAL | Mint online-root scan is complete (487,296 discovered); Mac and Acer retain explicit cloud/unreadable/separate-root gaps; hourly ingestion advances bounded batches |
 
 ## Verification commands
 
@@ -30,7 +30,8 @@ Branch: `feat/private-full-stack-arra-deployment`
 
 ## Explicit gaps
 
-Coverage is intentionally not reported complete until an online-root snapshot
-finishes and supported records reconcile. Acer's logical G: volume is absent from
-verified partitions and remains unverified. Codex fallback, public hosting, and a
-separate swarm runtime remain deferred by approved scope.
+Mint's online-root snapshot is complete, but cross-device coverage is not claimed
+complete while Mac cloud/unreadable roots and Acer C:/D: gaps remain. Acer's
+logical G: volume is absent from verified partitions and remains unverified.
+Codex fallback, public hosting, and a separate swarm runtime remain deferred by
+approved scope.

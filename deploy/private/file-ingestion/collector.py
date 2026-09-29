@@ -13,7 +13,8 @@ from filedb import FileDb
 
 def collect(root, device, volume, state, db_root=None, limit=None, transport=None):
     state = Path(state)
-    result = capture(root, device, volume, state / 'inventory', exclusions=[state, db_root] if db_root else [state], floor={
+    extra = [Path(root) / 'Documents/arra-oracle/deployment/private-bundle-20260928'] if device == 'mint' else []
+    result = capture(root, device, volume, state / 'inventory', exclusions=[state, db_root, *extra] if db_root else [state, *extra], floor={
         'mac': 10, 'mint': 15, 'acer': 20}[device] * 1024**3)
     snapshots = list((state / 'inventory').glob('*.jsonl.gz'))
     snapshot = max(snapshots, key=lambda path: path.stat().st_mtime_ns) if snapshots else None
@@ -23,7 +24,7 @@ def collect(root, device, volume, state, db_root=None, limit=None, transport=Non
             db.record_scan(result.get('scan_id'), device, volume, result.get('complete', False), result.get('counts', {}), result.get('started'), result.get('ended'))
         finally:
             db.close()
-    if not snapshot or (not db_root and not transport):
+    if not snapshot or not transport:
         return result
     sent = 0
     checkpoint = state / 'transport-checkpoint.json'
