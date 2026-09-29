@@ -111,3 +111,16 @@ Both local service units are active. Hermes CLI inference separately passed.
 Codex fallback requires the user's interactive Mint sign-in; no logout, credential
 copying, auth reset, or host-trust weakening performed. Keep completion automation
 active and do not count fallback as accepted.
+
+## User re-login verification, 2026-09-29 08:13 UTC
+
+After the user reported completing Mint sign-in, strict-SSH actual Codex inference
+no longer returned invalid_refresh_token or HTTP 401. It still returned turn.failed:
+the newly authenticated account has reached its usage limit. A second bounded
+inference probe confirmed the provider's usage-limit error and suggested retry at
+October 13, 2026, 4:01 PM (provider message did not specify timezone).
+
+Authentication repair is verified; inference availability is not. No credentials,
+subscription, account, or deployment configuration changed by this verification.
+Fallback acceptance remains blocked on available Codex quota; retain completion
+automation and the existing functioning Hermes primary.
