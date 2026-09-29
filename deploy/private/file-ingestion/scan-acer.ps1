@@ -4,7 +4,7 @@ $bundle = "$env:LOCALAPPDATA\arra-files"
 $state = "$env:LOCALAPPDATA\arra-files-state"
 $whisper = "$env:LOCALAPPDATA\arra-whisper\Scripts\whisper.exe"
 if (!(Test-Path $whisper)) { $whisper = "$env:APPDATA\Python\Python314\Scripts\whisper.exe" }
-if (Test-Path $whisper) {
+if ((Test-Path $whisper) -and (Test-Path "$env:LOCALAPPDATA\arra-whisper\READY")) {
   $env:ARRA_WHISPER_BIN = $whisper
   $env:ARRA_WHISPER_MODEL = 'small'
 }
