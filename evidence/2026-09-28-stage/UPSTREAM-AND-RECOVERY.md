@@ -124,3 +124,21 @@ Authentication repair is verified; inference availability is not. No credentials
 subscription, account, or deployment configuration changed by this verification.
 Fallback acceptance remains blocked on available Codex quota; retain completion
 automation and the existing functioning Hermes primary.
+
+## Independent gate closeout, 2026-09-29 08:15 UTC
+
+Continued quota-independent checks rather than retrying unavailable inference:
+
+- `bun test tests/deploy/private tests/mcp`: 176 passed, zero failed, 334 assertions.
+- `bunx tsc --noEmit` and `git diff --check`: exit 0.
+- Production container running/healthy with revision 620dd0ec; normal backup service
+  Result=success, ExecMainStatus=0; backup timer active.
+- Authenticated health, stats, OpenAPI, federation status, vector stats and hybrid
+  search: HTTP 200. Missing and invalid HTTP credentials: 401 in both cases.
+- Mac encrypted backup pull: all three available receipts passed checksums.
+- Official `maw arra health` through Mac loopback tunnel: ok, embedded vector mode,
+  SQLite-vec bge-m3, 848 documents. Existing duplicate plugin-discovery warnings
+  were observed; no unrelated plugin tree was modified. Initial JSON-only output
+  parser was unsuitable for maw's text output; direct command was rerun.
+
+These checks do not waive the remaining real Codex fallback quota gate.
