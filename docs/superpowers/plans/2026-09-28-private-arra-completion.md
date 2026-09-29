@@ -5,6 +5,17 @@ Mac is the sole deployment/config writer; Mint is data authority; Acer retains i
 No public exposure, personal import, host-trust weakening, OS upgrade, or separate swarm.
 Preserve existing dirty deployment work. Continue on the existing feature branch; update PR #3065 against alpha, never self-merge.
 
+## Accepted scope amendment — 2026-09-29
+
+User accepted Hermes/Grok-only inference acceptance, with Codex fallback deferred.
+Existing fallback wiring may remain installed but is not a verified availability
+guarantee: the authenticated Mint account is quota-limited. Re-test actual fallback
+inference after quota is available; no paid plan or API purchase is required for
+the accepted Hermes-backed operation. This amendment supersedes the original
+two-provider completion condition below, not its historical execution evidence.
+The revised deployment scope is accepted complete; remove the completion heartbeat
+and retain normal encrypted backups, off-host copying and health monitoring.
+
 ## Task 1: Restore official private API surfaces
 
 Write authenticated OpenAPI and federation mounting regressions, observe failures, then minimally repair internal auth propagation and optional route registration.

@@ -142,3 +142,16 @@ Continued quota-independent checks rather than retrying unavailable inference:
   parser was unsuitable for maw's text output; direct command was rerun.
 
 These checks do not waive the remaining real Codex fallback quota gate.
+
+## User-approved scope acceptance — 2026-09-29
+
+User explicitly accepted the proposed Hermes-only acceptance with Codex deferred.
+The original successful-live-Codex-fallback requirement is therefore deferred,
+not passed. Existing provider wiring is unchanged; Codex availability remains
+unverified while quota-limited. No billing changes or purchases authorized.
+
+Fresh closeout HTTP health: healthy; FTS 848/848, vectors 848/848, zero pending.
+Prior execution above records actual Hermes cited answers, native Mac/Mint/Acer
+client checks, isolated encrypted recovery, security gates, tests and Git delivery.
+Accept the revised scope and remove only finish-private-arra-deployment;
+retain normal backup timer, Mac encrypted pull and health monitoring.
