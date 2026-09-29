@@ -1,5 +1,9 @@
 #!/bin/sh
 set -eu
+if [ -x /Users/poramateake/.codex/arra-whisper-cpu/bin/whisper ]; then
+  export ARRA_WHISPER_BIN=/Users/poramateake/.codex/arra-whisper-cpu/bin/whisper
+  export ARRA_WHISPER_MODEL=small
+fi
 exec /usr/bin/python3 /Users/poramateake/.codex/lib/arra-files/collector.py \
   --root "${ARRA_FILES_ROOT:-/System/Volumes/Data}" \
   --device mac \

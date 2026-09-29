@@ -16,7 +16,7 @@ Branch: `feat/private-full-stack-arra-deployment`
 | Native schedules | PASS | Mint scan/ingest/embed timers, Mac LaunchAgent, Acer user task; latest Mac/Acer task exits 0 |
 | Backup/recovery | PASS | Age archive checksum verified; isolated restore reproduced files/vectors/FTS and known project paths |
 | Lifecycle safety | PASS | Changed content removes stale vectors; complete-scan-only deletion reconciliation; resumable snapshot checkpoints |
-| Local media path | PARTIAL | Mint CPU Whisper-small transcript pilot passed; Mac/Acer have no local Whisper model and keep explicit blocked outcomes |
+| Local media path | PARTIAL | Mint and Mac CPU Whisper-small transcript pilots passed; Acer model install is pending while the device is offline, so its media remains explicit blocked/metadata-only |
 | Full coverage | PARTIAL | Mint online-root scan is complete (487,296 discovered); Mac and Acer retain explicit cloud/unreadable/separate-root gaps; hourly ingestion advances bounded batches |
 
 ## Verification commands
